@@ -60,7 +60,7 @@ def expectationMaximization(points, k, eps):
         for i in range(k):
             mvns.append((sta.multivariate_normal.logpdf(
                 points, mean=mus[i], cov=covs[i], allow_singular=True)) *
-                priors[i])
+                        priors[i])
         mvns_sum = np.sum(np.array(mvns))
 
         # expectation
@@ -75,6 +75,7 @@ def expectationMaximization(points, k, eps):
                 classPosteriorProbabilities.append(posteriorProbability)
             posteriorProbabilities.append(classPosteriorProbabilities)
 
+        print(posteriorProbabilities)
         # maximization
         prev_mus = mus.copy()
         mus = []
@@ -92,7 +93,8 @@ def expectationMaximization(points, k, eps):
 
                 covNumerTotal = covNumerTotal + (
                     posteriorProbabilities[i][j] *
-                    np.cov(points[j] - prev_mus[i]))
+                    np.dot(points[j] - prev_mus[i],
+                           np.transpose(points[j] - prev_mus[i])))
 
             mu = muNumerTotal / denomTotal
             cov = covNumerTotal / denomTotal
@@ -104,7 +106,8 @@ def expectationMaximization(points, k, eps):
 
         # check convergence
         converged = isConverged(mus, prev_mus, k, eps)
-        finalPosteriorProbabilities = posteriorProbabilities
+        finalPosteriorProbabilities = np.transpose(
+            np.array(posteriorProbabilities))
     return [mus, covs, priors, finalPosteriorProbabilities]
 
 
@@ -139,35 +142,25 @@ def parseFile(filename, k):
 
 
 def assignPoints(k, points, posteriors):
-    combined = []
-    for i in range(len(points)):
-        co = []
-        for j in range(k):
-            co.append(posteriors[j][i])
-        combined.append(co)
 
-    clusters = dict()
+    clusters = []
 
     for i in range(len(points)):
-        post = combined[i]
+        post = posteriors[i].tolist()
         maxPost = max(post)
         maxPostIdx = post.index(maxPost)
-        if (maxPostIdx in clusters):
-            clusters[maxPostIdx].append(points[i])
-        else:
-            clusters[maxPostIdx] = [points[i]]
+        clusters.append(maxPostIdx)
 
     return clusters
 
 
-def purityScore(clusters, trueClusterLabels, trueNumberOfClusters):
+def purityScore(points, k, clusters, trueClusterLabels, trueNumberOfClusters):
     score = 0
     n = len(trueClusterLabels)
 
-    for cluster in clusters:
-        for j in range(trueNumberOfClusters):
-            print(cluster)
-
+    for i in range(len(trueClusterLabels)):
+        if (clusters[i] == trueClusterLabels[i]):
+            score += 1
     return score / n
 
 
@@ -177,21 +170,31 @@ if __name__ == "__main__":
     filename = arguments[1]
     k = int(arguments[2])  # num of clusters
     eps = float(arguments[3])  # convergence threshold
-    ridge = float(arguments[4])
+    ridge = float(
+        arguments[4]
+    )  #not using ridge, going to use pdf with accept singular matricies
     max_iter = int(arguments[5])  # max iterations
 
     # parse
-    point_view, col_view, trueClusterLabelks, headers = parseFile(filename, k)
+    point_view, col_view, trueClusterLabels, headers = parseFile(filename, k)
 
     mus, covs, priors, posteriors = expectationMaximization(point_view, k, eps)
 
     clusters = assignPoints(k, point_view, posteriors)
 
-    print("CLUSTER INFORMATION")
+    c = {}
     for i in clusters:
-        print("----CLUSTER", i, "----")
-        print("MEAN:", mus[i])
-        print("COVARIANCE:", covs[i])
-        print("SIZE:", len(clusters[i]))
+        if i not in c:
+            c[i] = 1
+        else:
+            c[i] += 1
+    print("CLUSTER INFORMATION")
+    for i in range(k):
+        if i in c:
+            print("----CLUSTER", i, "----")
+            print("MEAN:", mus[i])
+            print("COVARIANCE:", covs[i])
+            print("SIZE:", c[i])
 
-    print("PURITY SCORE: ")
+    print("PURITY SCORE: ",
+          purityScore(point_view, k, clusters, trueClusterLabels, 4))
