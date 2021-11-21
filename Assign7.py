@@ -46,8 +46,8 @@ def isConverged(mus, prev_mus, k, eps):
 
 def expectationMaximization(points, k, eps):
     t = 0
-    n = len(points)  #number of points
-    #inital paramters
+    n = len(points)  # number of points
+    # inital paramters
     mus, covs, priors = emInit(points, k)
     p_mu = len(points[0]) * [0]
     prev_mus = k * [p_mu.copy()]
@@ -60,10 +60,10 @@ def expectationMaximization(points, k, eps):
         for i in range(k):
             mvns.append((sta.multivariate_normal.logpdf(
                 points, mean=mus[i], cov=covs[i], allow_singular=True)) *
-                        priors[i])
+                priors[i])
         mvns_sum = np.sum(np.array(mvns))
 
-        #expectation
+        # expectation
         for i in range(k):
             classPosteriorProbabilities = []
             mvn = mvns[i]
@@ -71,11 +71,11 @@ def expectationMaximization(points, k, eps):
                 numer = spe.logsumexp(mvn[j])
                 denom = spe.logsumexp(mvns_sum)
 
-                posteriorProbability = numer / denom  #for point j in class i
+                posteriorProbability = numer / denom  # for point j in class i
                 classPosteriorProbabilities.append(posteriorProbability)
             posteriorProbabilities.append(classPosteriorProbabilities)
 
-        #maximization
+        # maximization
         prev_mus = mus.copy()
         mus = []
         covs = []
@@ -102,7 +102,7 @@ def expectationMaximization(points, k, eps):
             covs.append(cov)
             priors.append(prior)
 
-        #check convergence
+        # check convergence
         converged = isConverged(mus, prev_mus, k, eps)
         finalPosteriorProbabilities = posteriorProbabilities
     return [mus, covs, priors, finalPosteriorProbabilities]
@@ -160,8 +160,15 @@ def assignPoints(k, points, posteriors):
     return clusters
 
 
-def purityScore(clusters, trueClusterLabels):
-    return
+def purityScore(clusters, trueClusterLabels, trueNumberOfClusters):
+    score = 0
+    n = len(trueClusterLabels)
+
+    for cluster in clusters:
+        for j in range(trueNumberOfClusters):
+            print(cluster)
+
+    return score / n
 
 
 if __name__ == "__main__":
@@ -180,13 +187,11 @@ if __name__ == "__main__":
 
     clusters = assignPoints(k, point_view, posteriors)
 
-    print(clusters)
-
     print("CLUSTER INFORMATION")
-    for i in range(k):
+    for i in clusters:
         print("----CLUSTER", i, "----")
         print("MEAN:", mus[i])
         print("COVARIANCE:", covs[i])
-        print("SIZE:", 0)
+        print("SIZE:", len(clusters[i]))
 
     print("PURITY SCORE: ")
